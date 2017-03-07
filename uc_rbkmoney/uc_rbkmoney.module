@@ -1,0 +1,587 @@
+<?php
+
+/**
+ * @file
+ * Integrates RBKmoney's payment service.
+ */
+
+module_load_include('inc', 'uc_rbkmoney', 'includes/uc_rbkmoney_settings');
+
+/**
+ * Implements hook_permission().
+ */
+function uc_rbkmoney_permission()
+{
+    return [
+        'administer uc_rbkmoney' => [
+            'title' => t('Administer RBKmoney'),
+            'description' => t('Access the RBKmoney administration page.'),
+        ],
+    ];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function uc_rbkmoney_menu()
+{
+    $items['admin/store/settings/uc_rbkmoney'] = [
+        'title' => 'RBKmoney',
+        'description' => 'Settings RBKmoney payment gateway',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => ['uc_rbkmoney_setup'],
+        'access arguments' => ['administer uc_rbkmoney'],
+        'type' => MENU_NORMAL_ITEM,
+    ];
+
+    $items['uc_rbkmoney/form/init'] = [
+        'title' => 'Form status',
+        'page callback' => 'uc_rbkmoney_init_form_info',
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+        'file' => 'includes/uc_rbkmoney_init_form.pages.inc',
+    ];
+
+    $items['uc_rbkmoney/status'] = [
+        'title' => 'Status',
+        'page callback' => 'uc_rbkmoney_status_info',
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+        'file' => 'includes/uc_rbkmoney_status.pages.inc',
+    ];
+
+    $items['uc_rbkmoney/success'] = [
+        'title' => 'Internal Data',
+        'page callback' => 'uc_rbkmoney_payment_end',
+        'page arguments' => ['success'],
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+    ];
+
+    $items['uc_rbkmoney/fail'] = [
+        'title' => 'Internal Data',
+        'page callback' => 'uc_rbkmoney_payment_end',
+        'page arguments' => ['fail'],
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+    ];
+
+    $items['uc_rbkmoney/rd/success'] = [
+        'title' => 'Internal Data',
+        'page callback' => 'uc_rbkmoney_payment_redirect',
+        'page arguments' => ['success'],
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+    ];
+
+    $items['uc_rbkmoney/rd/fail'] = [
+        'title' => 'Internal Data',
+        'page callback' => 'uc_rbkmoney_payment_redirect',
+        'page arguments' => ['fail'],
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+    ];
+
+    $items['uc_rbkmoney/callback/result'] = [
+        'title' => 'Callback',
+        'page callback' => 'uc_rbkmoney_callback_result',
+        'access arguments' => ['access content'],
+        'type' => MENU_CALLBACK,
+        'file' => 'includes/uc_rbkmoney_callback.pages.inc',
+    ];
+
+    return $items;
+}
+
+/**
+ * Callback for settings page.
+ */
+function uc_rbkmoney_setup()
+{
+    $form['uc_rbkmoney_help'] = [
+        '#markup' => t(l('RBKmoney документация', 'https://rbkmoney.github.io/docs/',
+            ['attributes' =>
+                ['target' => '_blank']
+            ])),
+    ];
+
+    $form['uc_rbkmoney_shop_id'] = [
+        '#type' => 'textfield',
+        '#title' => t('Ваш Shop ID'),
+        '#default_value' => variable_get('uc_rbkmoney_shop_id', '1'),
+        '#description' => t(''),
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_merchant_public_key'] = [
+        '#type' => 'textarea',
+        '#title' => t('Ваш публичный ключ'),
+        '#default_value' => MERCHANT_PUBLIC_KEY,
+        '#description' => t(''),
+        '#rows' => 10,
+        '#cols' => 10,
+        '#resizable' => FALSE,
+        '#weight' => 10,
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_merchant_private_key'] = [
+        '#type' => 'textarea',
+        '#title' => t('Ваш приватный ключ'),
+        '#default_value' => MERCHANT_PRIVATE_KEY,
+        '#description' => t(''),
+        '#rows' => 10,
+        '#cols' => 10,
+        '#resizable' => FALSE,
+        '#weight' => 10,
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_merchant_callback_public_key'] = [
+        '#type' => 'textarea',
+        '#title' => t('Ваш публичный ключ для обработки уведомлений'),
+        '#default_value' => MERCHANT_CALLBACK_PUBLIC_KEY,
+        '#description' => t(''),
+        '#rows' => 10,
+        '#cols' => 10,
+        '#resizable' => FALSE,
+        '#weight' => 10,
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_payform_path_logo'] = [
+        '#type' => 'textfield',
+        '#title' => t('Путь к логотипу'),
+        '#default_value' => variable_get('uc_rbkmoney_payform_path_logo', PAYMENT_FORM_PATH_IMG_LOGO),
+        '#description' => t(''),
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_payform_color_form'] = [
+        '#type' => 'textfield',
+        '#title' => t('Цвет в платежной форме'),
+        '#default_value' => variable_get('uc_rbkmoney_payform_color_form', 'rgb(39, 181, 63)'),
+        '#description' => t(''),
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_payform_company_name'] = [
+        '#type' => 'textfield',
+        '#title' => t('Название компании'),
+        '#default_value' => variable_get('uc_rbkmoney_payform_company_name', ''),
+        '#description' => t(''),
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_currency'] = [
+        '#type' => 'textfield',
+        '#title' => t('Валюта'),
+        '#default_value' => CURRENT_CURRENCY,
+        '#description' => t(''),
+        '#required' => TRUE,
+    ];
+
+    $form['uc_rbkmoney_log'] = [
+        '#type' => 'radios',
+        '#title' => t('Save RBKmoney\'s server responses in <a href=\'!dblog\'>system log</a>',
+            ['!dblog' => url(BASE_URL . '/#overlay=admin/reports/dblog')]),
+        '#options' => [1 => t('Yes'), 0 => t('No')],
+        '#default_value' => variable_get('uc_rbkmoney_log', 1),
+    ];
+
+    return system_settings_form($form);
+}
+
+/**
+ * Implements hook_uc_payment_method().
+ */
+function uc_rbkmoney_uc_payment_method()
+{
+    $img = theme('image', [
+            'path' => PAYMENT_METHOD_PATH_IMG_LOGO,
+            'alt' => 'RBKmoney',
+            'attributes' => [
+                'class' => 'system_logo'
+            ]
+        ]
+    );
+    $title = t('RBKmoney') . '<br />' . $img;
+    $methods[] = [
+        'id' => 'rbkmoney',
+        'name' => t('RBKmoney'),
+        'title' => $title,
+        'desc' => t('RBKmoney'),
+        'weight' => 1,
+        'callback' => 'uc_payment_method_rbkmoney',
+        'checkout' => TRUE,
+        //'no_gateway' => TRUE,
+    ];
+
+    return $methods;
+}
+
+/**
+ *  Implements hook_payment_method
+ */
+function uc_payment_method_rbkmoney()
+{
+    return;
+}
+
+/**
+ * Implements hook_form_alter() for uc_cart_checkout_review_form().
+ */
+function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
+{
+    $order_id = isset($_SESSION['cart_order']) ? intval($_SESSION['cart_order']) : 0;
+
+    if ($form_id == 'uc_cart_checkout_review_form' && $order_id > 0) {
+        $order = uc_order_load($order_id);
+
+        if ($order->payment_method == 'rbkmoney') {
+            unset($form['actions']['submit']);
+
+            if (empty($_SESSION[INVOICE_ID])) {
+                $response = _create_invoice($order);
+                $response_decode = drupal_json_decode($response['body']);
+
+                $invoice_id = !empty($response_decode['id']) ? $response_decode['id'] : '';
+
+                $_SESSION[INVOICE_ID] = $invoice_id;
+            } else {
+                $invoice_id = $_SESSION[INVOICE_ID];
+            }
+
+            $amount = ($order->order_total <= 0)
+                ? $order->order_total
+                : number_format($order->order_total);
+
+            $payframe = '<script src="' . PAYMENT_FORM_URL . '" class="rbkmoney-checkout"
+              data-key="' . MERCHANT_PUBLIC_KEY . '"
+              data-order-id="' . $order->order_id . '"
+              data-invoice-id="' . $invoice_id . '"
+              data-endpoint-init="' . PAYMENT_FORM_INIT_URL . '"
+              data-endpoint-events="' . PAYMENT_FORM_STATUS_URL . '"
+              data-endpoint-failed="' . PAYMENT_FORM_FAILED_URL . '"
+              data-endpoint-success="' . PAYMENT_FORM_SUCCESS_URL . '"
+              data-amount="' . $amount . '"
+              data-currency="' . CURRENT_CURRENCY . '"
+              data-button-color="' . variable_get('uc_rbkmoney_payform_color_form') . '"
+              data-logo="' . variable_get('uc_rbkmoney_payform_path_logo') . '"
+              data-name="' . variable_get('uc_rbkmoney_payform_company_name') . '">
+            </script>';
+
+            $form['#prefix'] = '<table><tr><td>';
+            $form['#suffix'] = '</td><td>' . $payframe . '</td></tr></table>';
+        }
+
+    }
+
+}
+
+/**
+ * Returns the description and subtotal of the products on an order.
+ */
+function _uc_rbkmoney_product_details($items)
+{
+    $desc = '';
+    if (!empty($items)) {
+        foreach ($items as $item) {
+            if (!empty($desc)) {
+                $desc .= ', ';
+            }
+            $desc .= $item->qty . 'x ' . check_plain($item->title);
+        }
+    }
+
+    return $desc;
+}
+
+function uc_rbkmoney_hook_form($form, &$form_state, $order)
+{
+    $order = uc_order_load($_SESSION['cart_order']);
+
+    $form['shopId'] = [
+        '#type' => 'hidden',
+        '#value' => variable_get('uc_rbkmoney_shop_id'),
+    ];
+
+    $form['orderId'] = [
+        '#type' => 'hidden',
+        '#value' => $order->order_id,
+    ];
+
+    $form['amount'] = [
+        '#type' => 'hidden',
+        '#value' => $order->order_total,
+    ];
+
+    $form['currency'] = [
+        '#type' => 'hidden',
+        '#value' => CURRENT_CURRENCY,
+    ];
+
+    $form['user_email'] = [
+        '#type' => 'hidden',
+        '#value' => $order->primary_email,
+    ];
+
+    $form['#action'] = '#';
+    $form['submit'] = [
+        '#type' => 'button',
+        '#value' => t('Place your order'),
+        '#attributes' => ['class' => ['ctools-use-modal']],
+        '#id' => 'go'
+    ];
+
+    return $form;
+}
+
+/**
+ * Payment request.
+ */
+function uc_rbkmoney_submit_form($form, &$form_state, $order)
+{
+    $order = uc_order_load($_SESSION['cart_order']);
+
+    $form['shopId'] = [
+        '#type' => 'hidden',
+        '#value' => variable_get('uc_rbkmoney_shop_id'),
+    ];
+
+    $form['orderId'] = [
+        '#type' => 'hidden',
+        '#value' => $order->order_id,
+    ];
+
+    $form['amount'] = [
+        '#type' => 'hidden',
+        '#value' => $order->order_total,
+    ];
+
+    $form['currency'] = [
+        '#type' => 'hidden',
+        '#value' => CURRENT_CURRENCY,
+    ];
+
+    $form['user_email'] = [
+        '#type' => 'hidden',
+        '#value' => $order->primary_email,
+    ];
+
+    $form['#action'] = '#';
+    $form['submit'] = [
+        '#type' => 'button',
+        '#value' => t('Place your order'),
+        '#attributes' => ['class' => ['ctools-use-modal']],
+        '#id' => 'go'
+    ];
+
+    return $form;
+}
+
+/**
+ * Callback redirect from RBKmoney site.
+ */
+function uc_rbkmoney_payment_redirect($arg)
+{
+    _uc_rbkmoney_logger('redirect', "<pre>%logs</pre>", ['%logs' => var_export($arg, TRUE)]);
+
+    switch ($arg) {
+        case 'success':
+            header('Location: ' . BASE_URL . '/uc_rbkmoney/success', TRUE, HTTP_CODE_MOVED_PERMANENTLY);
+            exit();
+            break;
+
+        case 'fail':
+            header('Location: ' . BASE_URL . '/uc_rbkmoney/fail', TRUE, HTTP_CODE_MOVED_PERMANENTLY);
+            exit();
+            break;
+    }
+
+    return;
+}
+
+/**
+ * Callback redirect from RBKmoney site.
+ */
+function uc_rbkmoney_payment_end($arg)
+{
+    switch ($arg) {
+        case 'success':
+            if (isset($_SESSION['cart_order'])) {
+                $_SESSION['uc_checkout'][$_SESSION['cart_order']]['do_complete'] = TRUE;
+                if (!empty($_SESSION[INVOICE_ID])) unset($_SESSION[INVOICE_ID]);
+                drupal_goto('cart/checkout/complete');
+            }
+            break;
+
+        case 'fail':
+            if (isset($_SESSION['cart_order'])) {
+                unset($_SESSION['cart_order']);
+                if (!empty($_SESSION[INVOICE_ID])) unset($_SESSION[INVOICE_ID]);
+                drupal_set_message(t('Your payment has been declined.'), 'error');
+                drupal_goto('cart');
+            }
+            break;
+    }
+
+    return;
+}
+
+function _create_invoice($order)
+{
+    $headers = [];
+    $headers[] = 'X-Request-ID: ' . uniqid();
+    $headers[] = 'Authorization: Bearer ' . MERCHANT_PRIVATE_KEY;
+    $headers[] = 'Content-type: application/json; charset=utf-8';
+    $headers[] = 'Accept: application/json';
+
+    $data = [
+        'shopID' => (int)variable_get('uc_rbkmoney_shop_id'),
+        'amount' => _uc_rbkmoney_prepare_amount($order->order_total),
+        'metadata' => _uc_rbkmoney_prepare_metadata($order),
+        'dueDate' => _uc_rbkmoney_prepare_due_date(),
+        'currency' => CURRENT_CURRENCY,
+        'product' => $order->order_id,
+        'description' => _uc_rbkmoney_product_details($order->products),
+    ];
+
+    $url = _uc_rbkmoney_prepare_api_url('processing/invoices');
+    $response = _uc_rbkmoney_send($url, HTTP_METHOD_POST, $headers, drupal_json_encode($data), 'init_invoice');
+    if ($response['http_code'] != HTTP_CODE_CREATED) {
+        drupal_set_message(t('Возникла ошибка при создания инвойса'), 'error');
+        drupal_goto('cart');
+    }
+
+    return $response;
+}
+
+/**
+ * Prepare due date
+ * @return string
+ */
+function _uc_rbkmoney_prepare_due_date()
+{
+    date_default_timezone_set('UTC');
+    return date(CREATE_INVOICE_TEMPLATE_DUE_DATE, strtotime(CREATE_INVOICE_DUE_DATE));
+}
+
+/**
+ * Prepare metadata
+ *
+ * @param $order Object
+ * @return array
+ */
+function _uc_rbkmoney_prepare_metadata($order)
+{
+    return [
+        'cms' => 'drupal',
+        'cms_version' => VERSION,
+        'module' => MODULE_NAME,
+        'order_id' => $order->order_id,
+    ];
+}
+
+/**
+ * Prepare amount (e.g. 124.24 -> 12424)
+ *
+ * @param $amount int
+ * @return int
+ */
+function _uc_rbkmoney_prepare_amount($amount)
+{
+    return ($amount > 0) ? ($amount * 100) : $amount;
+}
+
+function _uc_rbkmoney_send($url = '', $method = HTTP_METHOD_POST, $headers = [], $data = '', $type = '')
+{
+    $request = [
+        'url' => $url,
+        'method' => $method,
+        'body' => $data,
+        'headers' => $headers,
+    ];
+
+    $allowed_methods = [HTTP_METHOD_POST, HTTP_METHOD_GET];
+    if (!in_array($method, $allowed_methods)) {
+        $logs = [
+            'request' => $request,
+            'method' => $method,
+        ];
+        _uc_rbkmoney_logger($type, "<pre>%logs</pre>", ['%logs' => var_export([$logs], TRUE)]);
+        throw new Exception('Unsupported method ' . $method);
+    }
+
+    $curl = curl_init($url);
+    if ($method == HTTP_METHOD_POST) {
+        curl_setopt($curl, CURLOPT_POST, TRUE);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    }
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, FALSE);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
+    $body = curl_exec($curl);
+    $info = curl_getinfo($curl);
+    $curl_errno = curl_errno($curl);
+
+    $response['http_code'] = $info['http_code'];
+    $response['body'] = $body;
+    $response['error'] = $curl_errno;
+
+    $logs = [
+        'request' => $request,
+        'response' => $response,
+    ];
+
+    _uc_rbkmoney_logger($type, "<pre>%logs</pre>", ['%logs' => var_export($logs, TRUE)]);
+    curl_close($curl);
+
+    return $response;
+}
+
+function _uc_rbkmoney_update_status_order($order_id = '', $invoice_status = '')
+{
+    _uc_rbkmoney_logger('update_status_order_req', 'order_id: ' . $order_id . '; invoice status: ' . $invoice_status);
+    $order = uc_order_load($order_id);
+    // if the user is anonymous - always equals zero
+    $uid = isset($order->uid) ? $order->uid : ANONYMOUS_USER_ID;
+
+    switch ($invoice_status) {
+        case UC_RBKMONEY_STATUS_FAILED:
+            uc_order_update_status($order_id, 'canceled');
+            uc_order_comment_save($order_id, $uid, t('Order canceled'), $type = 'admin', $status = 1, $notify = FALSE);
+            $status = UC_RBKMONEY_STATUS_FAILED;
+            break;
+        case UC_RBKMONEY_STATUS_SUCCESS:
+            uc_payment_enter($order_id, 'RBKmoney', $order->order_total, $uid, NULL, NULL);
+            uc_order_update_status($order_id, 'completed');
+            uc_cart_complete_sale($order);
+            uc_order_comment_save($order_id, $uid, t('RBKmoney: payment successful'), $type = 'admin', $status = 1, $notify = FALSE);
+            $status = UC_RBKMONEY_STATUS_SUCCESS;
+            break;
+        default:
+            $status = $invoice_status;
+            break;
+    }
+    _uc_rbkmoney_logger('update_status_order_res', 'order status: ' . $status . '; order_id: ' . $order_id);
+}
+
+function _uc_rbkmoney_prepare_api_url($path = '', $query_params = [])
+{
+    $url = rtrim(API_URL,'/') . '/' . $path;
+    if(!empty($query_params)) {
+        $url .= '?' . http_build_query($query_params);
+    }
+
+    return $url;
+}
+
+function _uc_rbkmoney_logger($type, $message, $variables = [])
+{
+    if (variable_get('uc_rbkmoney_log')) {
+        watchdog(MODULE_NAME . '_' . $type, $message, $variables);
+    }
+}
