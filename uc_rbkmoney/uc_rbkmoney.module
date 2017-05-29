@@ -507,7 +507,7 @@ function _uc_rbkmoney_prepare_api_url($path = '', $query_params = [])
 
 function _uc_rbkmoney_logger($type, $message, $variables = [])
 {
-    if (variable_get('uc_rbkmoney_log')) {
+    if (variable_get('uc_rbkmoney_log', 1)) {
         watchdog(MODULE_NAME . '_' . $type, $message, $variables);
     }
 }
