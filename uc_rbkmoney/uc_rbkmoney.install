@@ -10,11 +10,10 @@
  */
 function uc_rbkmoney_uninstall() {
   variable_del('uc_rbkmoney_shop_id');
-  variable_del('uc_rbkmoney_merchant_public_key');
   variable_del('uc_rbkmoney_merchant_private_key');
   variable_del('uc_rbkmoney_merchant_callback_public_key');
   variable_del('uc_rbkmoney_payform_path_logo');
-  variable_del('uc_rbkmoney_payform_color_form');
+  variable_del('uc_rbkmoney_payform_button_label');
   variable_del('uc_rbkmoney_payform_company_name');
   variable_del('uc_rbkmoney_currency');
   variable_del('uc_rbkmoney_log');
