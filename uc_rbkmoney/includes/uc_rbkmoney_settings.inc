@@ -39,12 +39,6 @@ define('PAYMENT_FORM_PATH_IMG_LOGO', BASE_URL . MODULE_BASE_PATH . '/images/logo
 define('PAYMENT_METHOD_PATH_IMG_LOGO', MODULE_BASE_PATH . '/images/logo_rbkmoney.png');
 
 /**
- * Currency
- */
-define('DEFAULT_CURRENCY', 'RUB');
-define('CURRENT_CURRENCY', trim(variable_get('uc_rbkmoney_currency', DEFAULT_CURRENCY)));
-
-/**
  * Create invoice settings
  */
 define('CREATE_INVOICE_TEMPLATE_DUE_DATE', 'Y-m-d\TH:i:s\Z');

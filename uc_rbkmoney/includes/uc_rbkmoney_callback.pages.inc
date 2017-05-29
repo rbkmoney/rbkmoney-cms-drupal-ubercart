@@ -60,8 +60,8 @@ function uc_rbkmoney_callback_result()
         }
     }
 
-    $currency_shop_id = (int)variable_get('uc_rbkmoney_shop_id');
-    if ($data[INVOICE][INVOICE_SHOP_ID] != $currency_shop_id) {
+    $current_shop_id = (int)variable_get('uc_rbkmoney_shop_id');
+    if ($data[INVOICE][INVOICE_SHOP_ID] != $current_shop_id) {
         _uc_rbkmoney_logger($type, INVOICE_SHOP_ID . ' не совпадает . <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
         echo json_encode(array('message' => INVOICE_SHOP_ID . ' did not match'));

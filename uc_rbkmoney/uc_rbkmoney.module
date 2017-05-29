@@ -121,14 +121,6 @@ function uc_rbkmoney_setup()
         '#required' => TRUE,
     ];
 
-    $form['uc_rbkmoney_currency'] = [
-        '#type' => 'textfield',
-        '#title' => t('Валюта'),
-        '#default_value' => CURRENT_CURRENCY,
-        '#description' => t(''),
-        '#required' => TRUE,
-    ];
-
     $form['uc_rbkmoney_log'] = [
         '#type' => 'radios',
         '#title' => t('Save RBKmoney\'s server responses in <a href=\'!dblog\'>system log</a>',
@@ -261,11 +253,6 @@ function uc_rbkmoney_hook_form($form, &$form_state, $order)
         '#value' => $order->order_total,
     ];
 
-    $form['currency'] = [
-        '#type' => 'hidden',
-        '#value' => CURRENT_CURRENCY,
-    ];
-
     $form['user_email'] = [
         '#type' => 'hidden',
         '#value' => $order->primary_email,
@@ -302,11 +289,6 @@ function uc_rbkmoney_submit_form($form, &$form_state, $order)
     $form['amount'] = [
         '#type' => 'hidden',
         '#value' => $order->order_total,
-    ];
-
-    $form['currency'] = [
-        '#type' => 'hidden',
-        '#value' => CURRENT_CURRENCY,
     ];
 
     $form['user_email'] = [
@@ -371,12 +353,13 @@ function _uc_rbkmoney_create_invoice_access_token($invoice_id)
 
 function _uc_rbkmoney_create_invoice($order)
 {
+
     $data = [
         'shopID' => (int)variable_get('uc_rbkmoney_shop_id'),
         'amount' => _uc_rbkmoney_prepare_amount($order->order_total),
         'metadata' => _uc_rbkmoney_prepare_metadata($order),
         'dueDate' => _uc_rbkmoney_prepare_due_date(),
-        'currency' => CURRENT_CURRENCY,
+        'currency' => $order->currency,
         'product' => $order->order_id,
         'description' => _uc_rbkmoney_product_details($order->products),
     ];
