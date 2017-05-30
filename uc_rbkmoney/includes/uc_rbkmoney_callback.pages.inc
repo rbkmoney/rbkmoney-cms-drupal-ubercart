@@ -117,8 +117,8 @@ function _uc_rbkmoney_get_parameters_content_signature($content_signature)
 {
     preg_match_all(SIGNATURE_PATTERN, $content_signature, $matches, PREG_PATTERN_ORDER);
     $params = array();
-    $params['alg'] = !empty($matches[1][0]) ? $matches[1][0] : '';
-    $params['digest'] = !empty($matches[2][0]) ? $matches[2][0] : '';
+    $params[SIGNATURE_ALG] = !empty($matches[1][0]) ? $matches[1][0] : '';
+    $params[SIGNATURE_DIGEST] = !empty($matches[2][0]) ? $matches[2][0] : '';
     return $params;
 }
 
