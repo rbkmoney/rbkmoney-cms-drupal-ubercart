@@ -5,17 +5,17 @@
  * Integrates RBKmoney's payment service.
  */
 
-module_load_include('inc', 'uc_rbkmoney', 'includes/uc_rbkmoney_settings');
+module_load_include('inc', 'rbkmoney_checkout_ubercart', 'includes/rbkmoney_checkout_ubercart_settings');
 
 /**
  * Implements hook_permission().
  */
-function uc_rbkmoney_permission()
+function rbkmoney_checkout_ubercart_permission()
 {
     return [
-        'administer uc_rbkmoney' => [
+        'administer rbkmoney_checkout_ubercart' => [
             'title' => t('Administer RBKmoney'),
-            'description' => t('Access the RBKmoney administration page.'),
+            'description' => t('Access RBKmoney administration page.'),
         ],
     ];
 }
@@ -23,31 +23,31 @@ function uc_rbkmoney_permission()
 /**
  * Implements hook_menu().
  */
-function uc_rbkmoney_menu()
+function rbkmoney_checkout_ubercart_menu()
 {
-    $items['admin/store/settings/uc_rbkmoney'] = [
+    $items['admin/store/settings/rbkmoney_checkout_ubercart'] = [
         'title' => 'RBKmoney',
         'description' => 'Settings RBKmoney payment gateway',
         'page callback' => 'drupal_get_form',
-        'page arguments' => ['uc_rbkmoney_setup'],
-        'access arguments' => ['administer uc_rbkmoney'],
+        'page arguments' => ['rbkmoney_checkout_ubercart_setup'],
+        'access arguments' => ['administer rbkmoney_checkout_ubercart'],
         'type' => MENU_NORMAL_ITEM,
     ];
 
-    $items['uc_rbkmoney/success'] = [
+    $items['rbkmoney_checkout_ubercart/success'] = [
         'title' => 'Internal Data',
-        'page callback' => 'uc_rbkmoney_payment_end',
+        'page callback' => 'rbkmoney_checkout_ubercart_payment_end',
         'page arguments' => ['success'],
         'access arguments' => ['access content'],
         'type' => MENU_CALLBACK,
     ];
 
-    $items['uc_rbkmoney/callback/result'] = [
+    $items['rbkmoney_checkout_ubercart/callback/result'] = [
         'title' => 'Callback',
-        'page callback' => 'uc_rbkmoney_callback_result',
+        'page callback' => 'rbkmoney_checkout_ubercart/callback/result',
         'access arguments' => ['access content'],
         'type' => MENU_CALLBACK,
-        'file' => 'includes/uc_rbkmoney_callback.pages.inc',
+        'file' => 'includes/rbkmoney_checkout_ubercart_callback.pages.inc',
     ];
 
     return $items;
@@ -56,7 +56,7 @@ function uc_rbkmoney_menu()
 /**
  * Callback for settings page.
  */
-function uc_rbkmoney_setup()
+function rbkmoney_checkout_ubercart_setup()
 {
     $form['uc_rbkmoney_help'] = [
         '#markup' => t('Настройки платежного модуля RBKmoney'),
@@ -84,7 +84,7 @@ function uc_rbkmoney_setup()
 
     $form['tab1']['uc_rbkmoney_merchant_callback_public_key'] = [
         '#type' => 'textarea',
-        '#title' => t('Ваш публичный ключ для обработки уведомлени из <a href=\'!dblog\'>https://dashboard.rbk.money/api/webhooks</a>',
+        '#title' => t('Ключ подписи получаемых на Webhook уведомлений из <a href=\'!dblog\'>https://dashboard.rbk.money/api/webhooks</a>',
             ['!dblog' => "https://dashboard.rbk.money/api/webhooks"]),
         '#default_value' => MERCHANT_CALLBACK_PUBLIC_KEY,
         '#description' => t(''),
@@ -107,7 +107,7 @@ function uc_rbkmoney_setup()
         '#weight' => 10,
         '#required' => TRUE,
     ];
-    https://dashboard.rbk.money/api/webhooks
+
     $form['tab2'] = array(
         '#type' => 'fieldset',
         '#title' => t('Кастомизация формы оплаты'),
@@ -211,7 +211,7 @@ function uc_rbkmoney_setup()
 /**
  * Implements hook_uc_payment_method().
  */
-function uc_rbkmoney_uc_payment_method()
+function rbkmoney_checkout_ubercart_uc_payment_method()
 {
     $img = theme('image', [
             'path' => PAYMENT_METHOD_PATH_IMG_LOGO,
@@ -247,7 +247,7 @@ function uc_payment_method_rbkmoney()
 /**
  * Implements hook_form_alter() for uc_cart_checkout_review_form().
  */
-function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
+function rbkmoney_checkout_ubercart_form_alter(&$form, &$form_state, $form_id)
 {
     $order_id = isset($_SESSION['cart_order']) ? intval($_SESSION['cart_order']) : 0;
 
@@ -258,7 +258,7 @@ function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
             unset($form['actions']['submit']);
 
             if (empty($_SESSION[API_INVOICE_ID])) {
-                $response = _uc_rbkmoney_create_invoice($order);
+                $response = _rbkmoney_checkout_ubercart_create_invoice($order);
                 $response_decode = drupal_json_decode($response['body']);
 
                 $invoice_id = !empty($response_decode['id']) ? $response_decode['id'] : '';
@@ -268,7 +268,7 @@ function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
                 $invoice_id = $_SESSION[API_INVOICE_ID];
             }
 
-            $access_token = _uc_rbkmoney_create_invoice_access_token($invoice_id);
+            $access_token = _rbkmoney_checkout_ubercart_create_invoice_access_token($invoice_id);
 
             $company_name = (!empty(variable_get('uc_rbkmoney_payform_company_name'))) ? 'data-name="' . variable_get('uc_rbkmoney_payform_company_name') . '"' : '';
             $company_logo = (!empty(variable_get('uc_rbkmoney_payform_path_logo'))) ? 'data-logo="' . variable_get('uc_rbkmoney_payform_path_logo') . '"' : '';
@@ -300,7 +300,7 @@ function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
 /**
  * Returns the description and subtotal of the products on an order.
  */
-function _uc_rbkmoney_product_details($items)
+function _rbkmoney_checkout_ubercart_product_details($items)
 {
     $desc = '';
     if (!empty($items)) {
@@ -315,7 +315,7 @@ function _uc_rbkmoney_product_details($items)
     return $desc;
 }
 
-function uc_rbkmoney_hook_form($form, &$form_state, $order)
+function rbkmoney_checkout_ubercart_hook_form($form, &$form_state, $order)
 {
     $order = uc_order_load($_SESSION['cart_order']);
 
@@ -353,7 +353,7 @@ function uc_rbkmoney_hook_form($form, &$form_state, $order)
 /**
  * Payment request.
  */
-function uc_rbkmoney_submit_form($form, &$form_state, $order)
+function rbkmoney_checkout_ubercart_submit_form($form, &$form_state, $order)
 {
     $order = uc_order_load($_SESSION['cart_order']);
 
@@ -391,7 +391,7 @@ function uc_rbkmoney_submit_form($form, &$form_state, $order)
 /**
  * Callback redirect from RBKmoney site.
  */
-function uc_rbkmoney_payment_end($arg)
+function rbkmoney_checkout_ubercart_payment_end($arg)
 {
     switch ($arg) {
         case 'success':
@@ -415,11 +415,11 @@ function uc_rbkmoney_payment_end($arg)
     return;
 }
 
-function _uc_rbkmoney_create_invoice_access_token($invoice_id)
+function _rbkmoney_checkout_ubercart_create_invoice_access_token($invoice_id)
 {
-    $url = _uc_rbkmoney_prepare_api_url('processing/invoices/' . $invoice_id . '/access_tokens');
-    $headers = _uc_rbkmoney_prepare_headers();
-    $response = _uc_rbkmoney_send($url, $headers, '', 'access_tokens');
+    $url = _rbkmoney_checkout_ubercart_prepare_api_url('processing/invoices/' . $invoice_id . '/access_tokens');
+    $headers = _rbkmoney_checkout_ubercart_prepare_headers();
+    $response = _rbkmoney_checkout_ubercart_send($url, $headers, '', 'access_tokens');
 
     if ($response['http_code'] != HTTP_CODE_CREATED) {
         drupal_set_message(t('An error occurred while creating Invoice Access Token'), 'error');
@@ -432,21 +432,21 @@ function _uc_rbkmoney_create_invoice_access_token($invoice_id)
     return $access_token;
 }
 
-function _uc_rbkmoney_create_invoice($order)
+function _rbkmoney_checkout_ubercart_create_invoice($order)
 {
     $data = [
         'shopID' => (int)variable_get('uc_rbkmoney_shop_id'),
-        'amount' => _uc_rbkmoney_prepare_amount($order->order_total),
-        'metadata' => _uc_rbkmoney_prepare_metadata($order),
-        'dueDate' => _uc_rbkmoney_prepare_due_date(),
+        'amount' => _rbkmoney_checkout_ubercart_prepare_amount($order->order_total),
+        'metadata' => _rbkmoney_checkout_ubercart_prepare_metadata($order),
+        'dueDate' => _rbkmoney_checkout_ubercart_prepare_due_date(),
         'currency' => $order->currency,
         'product' => $order->order_id,
-        'description' => _uc_rbkmoney_product_details($order->products),
+        'description' => _rbkmoney_checkout_ubercart_product_details($order->products),
     ];
 
-    $url = _uc_rbkmoney_prepare_api_url('processing/invoices');
-    $headers = _uc_rbkmoney_prepare_headers();
-    $response = _uc_rbkmoney_send($url, $headers, drupal_json_encode($data), 'init_invoice');
+    $url = _rbkmoney_checkout_ubercart_prepare_api_url('processing/invoices');
+    $headers = _rbkmoney_checkout_ubercart_prepare_headers();
+    $response = _rbkmoney_checkout_ubercart_send($url, $headers, drupal_json_encode($data), 'init_invoice');
     if ($response['http_code'] != HTTP_CODE_CREATED) {
         drupal_set_message(t('An error occurred while creating invoice'), 'error');
         drupal_goto('cart');
@@ -455,7 +455,7 @@ function _uc_rbkmoney_create_invoice($order)
     return $response;
 }
 
-function _uc_rbkmoney_prepare_headers()
+function _rbkmoney_checkout_ubercart_prepare_headers()
 {
     $headers = [];
     $headers[] = 'X-Request-ID: ' . uniqid();
@@ -469,7 +469,7 @@ function _uc_rbkmoney_prepare_headers()
  * Prepare due date
  * @return string
  */
-function _uc_rbkmoney_prepare_due_date()
+function _rbkmoney_checkout_ubercart_prepare_due_date()
 {
     date_default_timezone_set('UTC');
     return date(CREATE_INVOICE_TEMPLATE_DUE_DATE, strtotime(CREATE_INVOICE_DUE_DATE));
@@ -481,7 +481,7 @@ function _uc_rbkmoney_prepare_due_date()
  * @param $order Object
  * @return array
  */
-function _uc_rbkmoney_prepare_metadata($order)
+function _rbkmoney_checkout_ubercart_prepare_metadata($order)
 {
     return [
         'cms' => 'drupal',
@@ -497,7 +497,7 @@ function _uc_rbkmoney_prepare_metadata($order)
  * @param $amount int
  * @return int
  */
-function _uc_rbkmoney_prepare_amount($amount)
+function _rbkmoney_checkout_ubercart_prepare_amount($amount)
 {
     if ($amount < 0) {
         drupal_set_message(t('Requested amount less than allowed'), 'error');
@@ -506,7 +506,7 @@ function _uc_rbkmoney_prepare_amount($amount)
     return $amount * 100;
 }
 
-function _uc_rbkmoney_send($url = '', $headers = [], $data = '', $type = '')
+function _rbkmoney_checkout_ubercart_send($url = '', $headers = [], $data = '', $type = '')
 {
     $request = [
         'url' => $url,
@@ -536,7 +536,7 @@ function _uc_rbkmoney_send($url = '', $headers = [], $data = '', $type = '')
         'response' => $response,
     ];
 
-    _uc_rbkmoney_logger($type, "<pre>%logs</pre>", ['%logs' => var_export($logs, TRUE)]);
+    _rbkmoney_checkout_ubercart_logger($type, "<pre>%logs</pre>", ['%logs' => var_export($logs, TRUE)]);
     curl_close($curl);
 
     return $response;
@@ -548,9 +548,9 @@ function _uc_rbkmoney_send($url = '', $headers = [], $data = '', $type = '')
  * @param string $order_id
  * @param string $invoice_status
  */
-function _uc_rbkmoney_update_status_order($order_id = '', $invoice_status = '')
+function _rbkmoney_checkout_ubercart_update_status_order($order_id = '', $invoice_status = '')
 {
-    _uc_rbkmoney_logger('update_status_order_req', 'order_id: ' . $order_id . '; invoice status: ' . $invoice_status);
+    _rbkmoney_checkout_ubercart_logger('update_status_order_req', 'order_id: ' . $order_id . '; invoice status: ' . $invoice_status);
     $order = uc_order_load($order_id);
     // if the user is anonymous - always equals zero
     $uid = isset($order->uid) ? $order->uid : ANONYMOUS_USER_ID;
@@ -572,10 +572,10 @@ function _uc_rbkmoney_update_status_order($order_id = '', $invoice_status = '')
             $status = $invoice_status;
             break;
     }
-    _uc_rbkmoney_logger('update_status_order_res', 'order status: ' . $status . '; order_id: ' . $order_id);
+    _rbkmoney_checkout_ubercart_logger('update_status_order_res', 'order status: ' . $status . '; order_id: ' . $order_id);
 }
 
-function _uc_rbkmoney_prepare_api_url($path = '', $query_params = [])
+function _rbkmoney_checkout_ubercart_prepare_api_url($path = '', $query_params = [])
 {
     $url = rtrim(API_URL, '/') . '/' . $path;
     if (!empty($query_params)) {
@@ -585,7 +585,7 @@ function _uc_rbkmoney_prepare_api_url($path = '', $query_params = [])
     return $url;
 }
 
-function _uc_rbkmoney_logger($type, $message, $variables = [])
+function _rbkmoney_checkout_ubercart_logger($type, $message, $variables = [])
 {
     if (variable_get('uc_rbkmoney_log', 1)) {
         watchdog(MODULE_NAME . '_' . $type, $message, $variables);

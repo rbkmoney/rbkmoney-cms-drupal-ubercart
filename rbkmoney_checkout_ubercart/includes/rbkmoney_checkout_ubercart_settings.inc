@@ -11,7 +11,7 @@ define('ANONYMOUS_USER_ID', 0);
 /**
  * Module data
  */
-define('MODULE_NAME', 'uc_rbkmoney');
+define('MODULE_NAME', 'rbkmoney_checkout_ubercart');
 define('MODULE_BASE_PATH', base_path() . drupal_get_path('module', MODULE_NAME));
 
 /**
@@ -30,7 +30,7 @@ define('MERCHANT_CALLBACK_PUBLIC_KEY', trim(variable_get('uc_rbkmoney_merchant_c
  */
 define('BASE_URL', $GLOBALS['base_url']);
 define('PAYMENT_FORM_URL', 'https://checkout.rbk.money/checkout.js');
-define('PAYMENT_FORM_SUCCESS_URL', BASE_URL . '/uc_rbkmoney/success');
+define('PAYMENT_FORM_SUCCESS_URL', BASE_URL . '/'.MODULE_NAME.'/success');
 define('PAYMENT_FORM_PATH_IMG_LOGO', BASE_URL . MODULE_BASE_PATH . '/images/logo_default.png');
 
 /**
