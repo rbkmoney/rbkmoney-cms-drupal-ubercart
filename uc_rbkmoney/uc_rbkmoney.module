@@ -84,7 +84,8 @@ function uc_rbkmoney_setup()
 
     $form['tab1']['uc_rbkmoney_merchant_callback_public_key'] = [
         '#type' => 'textarea',
-        '#title' => t('Ваш публичный ключ для обработки уведомлений'),
+        '#title' => t('Ваш публичный ключ для обработки уведомлени из <a href=\'!dblog\'>https://dashboard.rbk.money/api/webhooks</a>',
+            ['!dblog' => "https://dashboard.rbk.money/api/webhooks"]),
         '#default_value' => MERCHANT_CALLBACK_PUBLIC_KEY,
         '#description' => t(''),
         '#rows' => 10,
@@ -106,7 +107,7 @@ function uc_rbkmoney_setup()
         '#weight' => 10,
         '#required' => TRUE,
     ];
-
+    https://dashboard.rbk.money/api/webhooks
     $form['tab2'] = array(
         '#type' => 'fieldset',
         '#title' => t('Кастомизация формы оплаты'),
