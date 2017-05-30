@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Callback URL for RBKmoney server response
  *
@@ -13,26 +12,29 @@ function uc_rbkmoney_callback_result()
 
     if (empty($_SERVER[SIGNATURE])) {
         http_response_code(HTTP_CODE_BAD_REQUEST);
-        _uc_rbkmoney_logger($type, "Missing signature. <pre>%logs</pre>", ['%logs' => var_export([$content], TRUE)]);
+        _uc_rbkmoney_logger($type, "Webhook notification signature missing. <pre>%logs</pre>", ['%logs' => var_export(['content' => $content], TRUE)]);
+        echo json_encode(array('message' => 'Webhook notification signature missing'));
         exit();
     }
 
     $params_signature = _uc_rbkmoney_get_parameters_content_signature($_SERVER[SIGNATURE]);
     if (empty($params_signature[SIGNATURE_ALG])) {
-        _uc_rbkmoney_logger($type, "Missing required parameter " . SIGNATURE_ALG . " signature. <pre>%logs</pre>", ['%logs' => var_export([$content], TRUE)]);
+        _uc_rbkmoney_logger($type, "Missing required parameter " . SIGNATURE_ALG . " signature. <pre>%logs</pre>", ['%logs' => var_export(['content' => $content], TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
+        echo json_encode(array('message' => 'Missing required parameter ' . SIGNATURE_ALG));
         exit();
     }
 
     if (empty($params_signature[SIGNATURE_DIGEST])) {
-        _uc_rbkmoney_logger($type, "Missing required parameter " . SIGNATURE_DIGEST . " signature. <pre>%logs</pre>", ['%logs' => var_export([$content], TRUE)]);
+        _uc_rbkmoney_logger($type, "Missing required parameter " . SIGNATURE_DIGEST . " signature. <pre>%logs</pre>", ['%logs' => var_export(['content' => $content], TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
+        echo json_encode(array('message' => 'Missing required parameter ' . SIGNATURE_DIGEST));
         exit();
     }
 
     $signature = _uc_rbkmoney_urlsafe_b64decode($params_signature[SIGNATURE_DIGEST]);
     if (!_uc_rbkmoney_verification_signature($content, $signature, MERCHANT_CALLBACK_PUBLIC_KEY)) {
-        _uc_rbkmoney_logger($type, "Signature did not match. <pre>%logs</pre>",
+        _uc_rbkmoney_logger($type, "Webhook notification signature mismatch. <pre>%logs</pre>",
             ['%logs' => var_export([
                 $_SERVER[SIGNATURE],
                 $content,
@@ -40,7 +42,7 @@ function uc_rbkmoney_callback_result()
                 MERCHANT_CALLBACK_PUBLIC_KEY
             ], TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
-        echo json_encode(array('message' => 'Signature did not match'));
+        echo json_encode(array('message' => 'Webhook notification signature mismatch'));
         exit();
     }
 
@@ -49,29 +51,29 @@ function uc_rbkmoney_callback_result()
 
     foreach ($required_fields as $field) {
         if (empty($data[$field])) {
-            _uc_rbkmoney_logger($type, "Missing required fields. <pre>%logs</pre>",
+            _uc_rbkmoney_logger($type, " One or more required fields are missing <pre>%logs</pre>",
                 ['%logs' => var_export([
                     'input_content' => $content,
                     'required_fields' => $required_fields
                 ], TRUE)]);
             http_response_code(HTTP_CODE_BAD_REQUEST);
-            echo json_encode(array('message' => 'Missing required fields'));
+            echo json_encode(array('message' => 'One or more required fields are missing'));
             exit();
         }
     }
 
     $current_shop_id = (int)variable_get('uc_rbkmoney_shop_id');
     if ($data[INVOICE][INVOICE_SHOP_ID] != $current_shop_id) {
-        _uc_rbkmoney_logger($type, INVOICE_SHOP_ID . ' не совпадает . <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
+        _uc_rbkmoney_logger($type, ' Webhook notification ' . INVOICE_SHOP_ID . ' mismatch<pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
-        echo json_encode(array('message' => INVOICE_SHOP_ID . ' did not match'));
+        echo json_encode(array('message' => INVOICE_SHOP_ID . ' is missing'));
         exit();
     }
 
     if (empty($data[INVOICE][INVOICE_METADATA][ORDER_ID])) {
-        _uc_rbkmoney_logger($type, 'Missing ' . ORDER_ID . '. <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
+        _uc_rbkmoney_logger($type,  ORDER_ID . ' is missing <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
-        echo json_encode(array('message' => 'Missing ' . ORDER_ID));
+        echo json_encode(array('message' => ORDER_ID . ' is missing'));
         exit();
     }
 
@@ -80,9 +82,9 @@ function uc_rbkmoney_callback_result()
     $order_amount = _uc_rbkmoney_prepare_amount($order->order_total);
     $invoice_amount = $data[INVOICE][INVOICE_AMOUNT];
     if ($order_amount != $invoice_amount) {
-        _uc_rbkmoney_logger($type, 'The amount does not match the order amount <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
+        _uc_rbkmoney_logger($type, 'Received amount vs Order amount mismatch <pre>%logs</pre>', ['%logs' => var_export($content, TRUE)]);
         http_response_code(HTTP_CODE_BAD_REQUEST);
-        echo json_encode(array('message' => 'The amount does not match the order amount '));
+        echo json_encode(array('message' => 'Received amount vs Order amount mismatch'));
         exit();
     }
 

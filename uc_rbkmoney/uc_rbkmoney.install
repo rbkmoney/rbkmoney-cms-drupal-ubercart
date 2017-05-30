@@ -15,5 +15,6 @@ function uc_rbkmoney_uninstall() {
   variable_del('uc_rbkmoney_payform_path_logo');
   variable_del('uc_rbkmoney_payform_button_label');
   variable_del('uc_rbkmoney_payform_company_name');
+  variable_del('uc_rbkmoney_payform_description');
   variable_del('uc_rbkmoney_log');
 }

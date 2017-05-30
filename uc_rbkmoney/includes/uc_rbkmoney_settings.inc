@@ -39,6 +39,32 @@ define('PAYMENT_FORM_PATH_IMG_LOGO', BASE_URL . MODULE_BASE_PATH . '/images/logo
 define('PAYMENT_METHOD_PATH_IMG_LOGO', MODULE_BASE_PATH . '/images/logo_rbkmoney.png');
 
 /**
+ * Payment form default css button
+ */
+define('PAYMENT_FORM_DEFAULT_CSS_BUTTON', 'uc_rbkmoney_payform_css_button', '
+  button.rbkmoney-button {
+    border: 1px solid #e4e4e4;
+      border-bottom: 1px solid #b4b4b4;
+      border-left-color: #d2d2d2;
+      border-right-color: #d2d2d2;
+      color: #2f2f2f;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 2px;
+      margin-bottom: 1em;
+      margin-right: 0.6em;
+      padding: 4px 17px;
+      border-radius: 15px;
+      background: #eee;
+      box-shadow: none;
+      font: normal 0.929em/1.1em "Lucida Grande", "Lucida Sans Unicode", Verdana, sans-serif;
+  }
+  button.rbkmoney-button:hover {
+    background: #dedede;
+  }'
+);
+
+/**
  * Create invoice settings
  */
 define('CREATE_INVOICE_TEMPLATE_DUE_DATE', 'Y-m-d\TH:i:s\Z');

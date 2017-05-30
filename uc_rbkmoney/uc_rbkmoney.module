@@ -59,33 +59,30 @@ function uc_rbkmoney_menu()
 function uc_rbkmoney_setup()
 {
     $form['uc_rbkmoney_help'] = [
-        '#markup' => t(l('RBKmoney документация', 'https://rbkmoney.github.io/docs/',
-            ['attributes' =>
-                ['target' => '_blank']
-            ])),
+        '#markup' => t('Настройки платежного модуля RBKmoney'),
     ];
 
-    $form['uc_rbkmoney_shop_id'] = [
+    $form['vertical_tabs'] = array(
+        '#type' => 'vertical_tabs',
+        '#default_tab' => 'edit-tab1',
+    );
+
+    $form['tab1'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Обязательные настройки'),
+        '#collapsible' => TRUE,
+        '#group' => 'vertical_tabs',
+    );
+
+    $form['tab1']['uc_rbkmoney_shop_id'] = [
         '#type' => 'textfield',
-        '#title' => t('Ваш Shop ID'),
+        '#title' => t('ID магазина'),
         '#default_value' => variable_get('uc_rbkmoney_shop_id', '1'),
         '#description' => t(''),
         '#required' => TRUE,
     ];
 
-    $form['uc_rbkmoney_merchant_private_key'] = [
-        '#type' => 'textarea',
-        '#title' => t('Ваш приватный ключ'),
-        '#default_value' => MERCHANT_PRIVATE_KEY,
-        '#description' => t(''),
-        '#rows' => 10,
-        '#cols' => 10,
-        '#resizable' => FALSE,
-        '#weight' => 10,
-        '#required' => TRUE,
-    ];
-
-    $form['uc_rbkmoney_merchant_callback_public_key'] = [
+    $form['tab1']['uc_rbkmoney_merchant_callback_public_key'] = [
         '#type' => 'textarea',
         '#title' => t('Ваш публичный ключ для обработки уведомлений'),
         '#default_value' => MERCHANT_CALLBACK_PUBLIC_KEY,
@@ -97,37 +94,115 @@ function uc_rbkmoney_setup()
         '#required' => TRUE,
     ];
 
-    $form['uc_rbkmoney_payform_path_logo'] = [
+    $form['tab1']['uc_rbkmoney_merchant_private_key'] = [
+        '#type' => 'textarea',
+        '#title' => t('Ваш ключ для доступа к API из <a href=\'!dblog\'>https://dashboard.rbk.money/api/key</a>',
+            ['!dblog' => "https://dashboard.rbk.money/api/key"]),
+        '#default_value' => MERCHANT_PRIVATE_KEY,
+        '#description' => t(''),
+        '#rows' => 10,
+        '#cols' => 10,
+        '#resizable' => FALSE,
+        '#weight' => 10,
+        '#required' => TRUE,
+    ];
+
+    $form['tab2'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Кастомизация формы оплаты'),
+        '#collapsible' => TRUE,
+        '#group' => 'vertical_tabs',
+    );
+
+    $form['tab2']['uc_rbkmoney_payform_path_logo'] = [
         '#type' => 'textfield',
-        '#title' => t('URL для задания логотипа'),
+        '#title' => t('URL логотипа для отображения на форме оплаты'),
         '#default_value' => variable_get('uc_rbkmoney_payform_path_logo', PAYMENT_FORM_PATH_IMG_LOGO),
         '#description' => t(''),
-        '#required' => TRUE,
+        '#required' => FALSE,
     ];
 
-    $form['uc_rbkmoney_payform_button_label'] = [
+    $form['tab2']['uc_rbkmoney_payform_button_label'] = [
         '#type' => 'textfield',
-        '#title' => t('Текст для кнопки'),
+        '#title' => t('Текст кнопки открытия формы оплаты'),
         '#default_value' => variable_get('uc_rbkmoney_payform_button_label', ''),
         '#description' => t(''),
-        '#required' => TRUE,
+        '#required' => FALSE,
     ];
 
-    $form['uc_rbkmoney_payform_company_name'] = [
+    $form['tab2']['uc_rbkmoney_payform_description'] = [
         '#type' => 'textfield',
-        '#title' => t('Название компании'),
+        '#title' => t('Описание в форме оплаты'),
+        '#default_value' => variable_get('uc_rbkmoney_payform_description', ''),
+        '#description' => t(''),
+        '#required' => FALSE,
+    ];
+
+    $form['tab2']['uc_rbkmoney_payform_company_name'] = [
+        '#type' => 'textfield',
+        '#title' => t('Название магазина для отображения на форме оплаты'),
         '#default_value' => variable_get('uc_rbkmoney_payform_company_name', ''),
         '#description' => t(''),
-        '#required' => TRUE,
+        '#required' => FALSE,
     ];
 
-    $form['uc_rbkmoney_log'] = [
+    $form['tab2']['uc_rbkmoney_payform_css_button'] = [
+        '#type' => 'textarea',
+        '#title' => t('Стилизация кнопки открытия формы оплаты'),
+        '#default_value' => variable_get('uc_rbkmoney_payform_css_button', PAYMENT_FORM_DEFAULT_CSS_BUTTON),
+        '#description' => t(''),
+        '#rows' => 10,
+        '#cols' => 10,
+        '#resizable' => FALSE,
+        '#weight' => 10,
+        '#required' => FALSE,
+    ];
+
+    $form['tab3'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Дополнительные настройки'),
+        '#collapsible' => TRUE,
+        '#group' => 'vertical_tabs',
+    );
+
+    $form['tab3']['common_settings']['uc_rbkmoney_log'] = [
         '#type' => 'radios',
-        '#title' => t('Save RBKmoney\'s server responses in <a href=\'!dblog\'>system log</a>',
+        '#title' => t('Сохранять лог RBKmoney API в <a href=\'!dblog\'>system log</a>',
             ['!dblog' => url(BASE_URL . '/#overlay=admin/reports/dblog')]),
         '#options' => [1 => t('Yes'), 0 => t('No')],
         '#default_value' => variable_get('uc_rbkmoney_log', 1),
     ];
+
+    $form['tab4'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Документация'),
+        '#collapsible' => TRUE,
+        '#group' => 'vertical_tabs',
+    );
+
+    $form['tab4']['docs_integrations'] = array(
+        '#type' => 'item',
+        '#markup' => t(l('Документация по интеграции', 'https://rbkmoney.github.io/docs',
+            ['attributes' =>
+                ['target' => '_blank']
+            ])),
+    );
+
+    $form['tab4']['docs_webhooks'] = array(
+        '#type' => 'item',
+        '#markup' => t(l('Документация для работы с вебхуками', 'https://rbkmoney.github.io/webhooks-events-api/',
+            ['attributes' =>
+                ['target' => '_blank']
+            ])),
+    );
+
+    $form['tab4']['docs_checkout'] = array(
+        '#type' => 'item',
+        '#markup' => t(l('Документация по кастомизации платежной формы', 'https://rbkmoney.github.io/docs/integrations/checkout/#html-api',
+            ['attributes' =>
+                ['target' => '_blank']
+            ])),
+    );
 
     return system_settings_form($form);
 }
@@ -197,6 +272,7 @@ function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
             $company_name = (!empty(variable_get('uc_rbkmoney_payform_company_name'))) ? 'data-name="' . variable_get('uc_rbkmoney_payform_company_name') . '"' : '';
             $company_logo = (!empty(variable_get('uc_rbkmoney_payform_path_logo'))) ? 'data-logo="' . variable_get('uc_rbkmoney_payform_path_logo') . '"' : '';
             $button_label = (!empty(variable_get('uc_rbkmoney_payform_button_label'))) ? 'data-label="' . variable_get('uc_rbkmoney_payform_button_label') . '"' : '';
+            $description = (!empty(variable_get('uc_rbkmoney_payform_description'))) ? 'data-description="' . variable_get('uc_rbkmoney_payform_description') . '"' : '';
 
             $payframe = '<form action="' . PAYMENT_FORM_SUCCESS_URL . '" method="' . HTTP_METHOD_GET . '">
               <script src="' . PAYMENT_FORM_URL . '" class="rbkmoney-checkout"
@@ -204,12 +280,16 @@ function uc_rbkmoney_form_alter(&$form, &$form_state, $form_id)
                       data-invoice-access-token="' . $access_token . '"
                       ' . $company_name . '
                       ' . $company_logo . '
-                      ' . $button_label . '>
+                      ' . $button_label . '
+                      ' . $description . '
+                      >
               </script>
             </form>';
 
+            $css_button = '<style>' . strip_tags(variable_get('uc_rbkmoney_payform_css_button', PAYMENT_FORM_DEFAULT_CSS_BUTTON)) . '</style>';
+
             $form['#prefix'] = '<table><tr><td>';
-            $form['#suffix'] = '</td><td>' . $payframe . '</td></tr></table>';
+            $form['#suffix'] = '</td><td>' . $css_button . $payframe . '</td></tr></table>';
         }
 
     }
@@ -341,7 +421,7 @@ function _uc_rbkmoney_create_invoice_access_token($invoice_id)
     $response = _uc_rbkmoney_send($url, $headers, '', 'access_tokens');
 
     if ($response['http_code'] != HTTP_CODE_CREATED) {
-        drupal_set_message(t('There was an error creating the token for the invoice'), 'error');
+        drupal_set_message(t('An error occurred while creating Invoice Access Token'), 'error');
         drupal_goto('cart');
     }
 
@@ -353,7 +433,6 @@ function _uc_rbkmoney_create_invoice_access_token($invoice_id)
 
 function _uc_rbkmoney_create_invoice($order)
 {
-
     $data = [
         'shopID' => (int)variable_get('uc_rbkmoney_shop_id'),
         'amount' => _uc_rbkmoney_prepare_amount($order->order_total),
@@ -368,7 +447,7 @@ function _uc_rbkmoney_create_invoice($order)
     $headers = _uc_rbkmoney_prepare_headers();
     $response = _uc_rbkmoney_send($url, $headers, drupal_json_encode($data), 'init_invoice');
     if ($response['http_code'] != HTTP_CODE_CREATED) {
-        drupal_set_message(t('There was an error creating the invoice'), 'error');
+        drupal_set_message(t('An error occurred while creating invoice'), 'error');
         drupal_goto('cart');
     }
 
@@ -420,7 +499,7 @@ function _uc_rbkmoney_prepare_metadata($order)
 function _uc_rbkmoney_prepare_amount($amount)
 {
     if ($amount < 0) {
-        drupal_set_message(t('Сумма заказа меньше нуля'), 'error');
+        drupal_set_message(t('Requested amount less than allowed'), 'error');
         drupal_goto('cart');
     }
     return $amount * 100;
