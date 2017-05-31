@@ -41,7 +41,7 @@ define('PAYMENT_METHOD_PATH_IMG_LOGO', MODULE_BASE_PATH . '/images/logo_rbkmoney
 /**
  * Payment form default css button
  */
-define('PAYMENT_FORM_DEFAULT_CSS_BUTTON', 'uc_rbkmoney_payform_css_button', '
+define('PAYMENT_FORM_DEFAULT_CSS_BUTTON', trim(variable_get('uc_rbkmoney_payform_css_button', '
   button.rbkmoney-button {
     border: 1px solid #e4e4e4;
       border-bottom: 1px solid #b4b4b4;
@@ -62,7 +62,7 @@ define('PAYMENT_FORM_DEFAULT_CSS_BUTTON', 'uc_rbkmoney_payform_css_button', '
   button.rbkmoney-button:hover {
     background: #dedede;
   }'
-);
+)));
 
 /**
  * Create invoice settings
