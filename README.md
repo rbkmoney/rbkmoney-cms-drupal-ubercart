@@ -1,4 +1,4 @@
-# Drupal uc_rbkmoney module
+# Drupal rbkmoney_checkout_ubercart module
 
 Модуль оплаты `rbkmoney_checkout_ubercart` необходим для интеграции с сервисом [RBKmoney](http://rbk.money/) на базе CMS Drupal и компонента [Drupal ubercart](https://www.drupal.org/project/ubercart).
 
